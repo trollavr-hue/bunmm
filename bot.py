@@ -55,30 +55,19 @@ def format_timestamp(seconds_from_now: int) -> int:
 
 
 def build_giveaway_description(ends_ts, host_id, entries):
-    """
-    Creates the stacked text layout exactly like the screenshot.
-    No winners until the giveaway ends.
-    """
     return (
-        "```\n"
-        f"Ends:       <t:{ends_ts}:F>\n"
-        f"Hosted by:  @{host_id}\n"
-        f"Entries:    {entries}\n"
-        "```"
+        f"Ends: **<t:{ends_ts}:F>**\n"
+        f"Hosted by: **<@{host_id}>**\n"
+        f"Entries: **{entries}**\n"
     )
 
 
 def build_final_description(host_id, entries, winners):
-    """
-    Final stacked layout with winners added.
-    """
     return (
-        "```\n"
-        f"Ended:      <t:{int(discord.utils.utcnow().timestamp())}:F>\n"
-        f"Hosted by:  @{host_id}\n"
-        f"Entries:    {entries}\n"
-        f"Winners:    {winners}\n"
-        "```"
+        f"Ended: **<t:{int(discord.utils.utcnow().timestamp())}:F>**\n"
+        f"Hosted by: **<@{host_id}>**\n"
+        f"Entries: **{entries}**\n"
+        f"Winners: **{winners}**\n"
     )
 
 
