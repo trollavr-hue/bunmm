@@ -4,13 +4,19 @@ from discord.ext import commands
 
 TOKEN = os.getenv("TOKEN")
 
-OWNER_ID = 1429110753683832985  # Only track YOUR messages
-NOTIFY_CHANNEL_ID = 1421305736121552985  # Where notifications are sent
+# Users allowed to trigger the reaction alert
+ALLOWED_USERS = {1385468564231815239, 1429110753683832985}
+
+# Channel where the bot sends the notification
+NOTIFY_CHANNEL_ID = 1421305736817934475
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True
 intents.messages = True
+
+# Disable voice to avoid audioop import
+discord.VoiceClient = None
 
 bot = commands.Bot(command_prefix="s!", intents=intents)
 
@@ -26,14 +32,14 @@ async def on_reaction_add(reaction, user):
 
     message = reaction.message
 
-    # Only track YOUR messages
-    if message.author.id != OWNER_ID:
+    # Only track messages from allowed users
+    if message.author.id not in ALLOWED_USERS:
         return
 
-    # Count reactions
+    # Count total reactions
     total_reacts = sum(r.count for r in message.reactions)
 
-    # Trigger at 1 reaction
+    # Trigger at exactly 1 reaction
     if total_reacts == 1:
         channel = bot.get_channel(NOTIFY_CHANNEL_ID)
         if channel is None:
@@ -44,7 +50,9 @@ async def on_reaction_add(reaction, user):
                 return
 
         try:
-            await channel.send(f"Hey <@{OWNER_ID}>, your message got 1 reaction.")
+            await channel.send(
+                f"Hey king Fttduck, your message got 1 reaction. <@1385468564231815239>"
+            )
             print("[SUCCESS] Notification sent.")
         except Exception as e:
             print(f"[ERROR] Failed to send notification: {e}")
