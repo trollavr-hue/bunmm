@@ -15,7 +15,7 @@ intents.message_content = True
 intents.reactions = True
 intents.messages = True
 
-# Disable voice to avoid audioop import
+# Disable voice to avoid audioop import errors
 discord.VoiceClient = None
 
 bot = commands.Bot(command_prefix="s!", intents=intents)
@@ -36,7 +36,7 @@ async def on_reaction_add(reaction, user):
     if message.author.id not in ALLOWED_USERS:
         return
 
-    # Count total reactions
+    # Count total reactions on the message
     total_reacts = sum(r.count for r in message.reactions)
 
     # Trigger at exactly 1 reaction
@@ -51,7 +51,7 @@ async def on_reaction_add(reaction, user):
 
         try:
             await channel.send(
-                f"Hey king Fttduck, your message got 1 reaction. <@1385468564231815239>"
+                "Hey king Ftdduck, your message has reached 1 reaction. <@1385468564231815239>"
             )
             print("[SUCCESS] Notification sent.")
         except Exception as e:
