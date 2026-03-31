@@ -1,2 +1,2 @@
 [start]
-cmd = "python3 bot.py"
+cmd = "python3 giveaway.py"
