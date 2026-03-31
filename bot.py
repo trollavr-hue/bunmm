@@ -3,47 +3,50 @@ import discord
 from discord.ext import commands
 
 TOKEN = os.getenv("TOKEN")
-OWNER_ID = 1429110753683832985  # Only you can use the bot
+
+OWNER_ID = 1429110753683832985  # Only track YOUR messages
+NOTIFY_CHANNEL_ID = 1421305736121552985  # Where notifications are sent
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.dm_messages = True
-
-# Disable voice entirely so discord.py never imports audioop
-discord.VoiceClient = None
+intents.reactions = True
+intents.messages = True
 
 bot = commands.Bot(command_prefix="s!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"[READY] Logged in as {bot.user} (ID: {bot.user.id})")
+    print(f"[READY] Logged in as {bot.user}")
 
-@bot.command()
-async def send(ctx, channel_id: int, *, message: str):
-    # Only allow DM usage
-    if not isinstance(ctx.channel, discord.DMChannel):
+@bot.event
+async def on_reaction_add(reaction, user):
+    # Ignore bot reactions
+    if user.bot:
         return
 
-    # Only allow YOU
-    if ctx.author.id != OWNER_ID:
+    message = reaction.message
+
+    # Only track YOUR messages
+    if message.author.id != OWNER_ID:
         return
 
-    # Fetch channel
-    channel = bot.get_channel(channel_id)
-    if channel is None:
+    # Count reactions
+    total_reacts = sum(r.count for r in message.reactions)
+
+    # Trigger at 1 reaction
+    if total_reacts == 1:
+        channel = bot.get_channel(NOTIFY_CHANNEL_ID)
+        if channel is None:
+            try:
+                channel = await bot.fetch_channel(NOTIFY_CHANNEL_ID)
+            except:
+                print("[ERROR] Could not fetch notify channel.")
+                return
+
         try:
-            channel = await bot.fetch_channel(channel_id)
-        except:
-            await ctx.reply("Invalid channel ID.")
-            return
-
-    # Send message
-    try:
-        await channel.send(message)
-        await ctx.reply("Message sent successfully.")
-        print(f"[SUCCESS] Sent to {channel_id}")
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        await ctx.reply("Failed to send message.")
+            await channel.send(f"Hey <@{OWNER_ID}>, your message got 1 reaction.")
+            print("[SUCCESS] Notification sent.")
+        except Exception as e:
+            print(f"[ERROR] Failed to send notification: {e}")
 
 bot.run(TOKEN)
