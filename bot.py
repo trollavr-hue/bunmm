@@ -35,6 +35,9 @@ discord.VoiceClient = None
 
 bot = commands.Bot(command_prefix="s!", intents=intents)
 
+# Nicer purple
+EMBED_COLOR = discord.Color.from_rgb(155, 89, 182)
+
 
 # ---------- UTILITIES ----------
 
@@ -144,20 +147,18 @@ class GiveawayView(discord.ui.View):
             return
 
         embed = message.embeds[0]
-        new_fields = []
-        for field in embed.fields:
-            if field.name.lower().startswith("entries"):
-                new_fields.append(discord.EmbedField(name="Entries", value=str(len(gw["entries"])), inline=False))
-            else:
-                new_fields.append(field)
-
         new_embed = discord.Embed(
             title=embed.title,
             description=embed.description,
-            color=discord.Color.purple()
+            color=EMBED_COLOR
         )
-        for field in new_fields:
-            new_embed.add_field(name=field.name, value=field.value, inline=field.inline)
+
+        # Rebuild fields, updating Entries only
+        for field in embed.fields:
+            if field.name.lower().startswith("entries"):
+                new_embed.add_field(name="Entries", value=str(len(gw["entries"])), inline=False)
+            else:
+                new_embed.add_field(name=field.name, value=field.value, inline=field.inline)
 
         await message.edit(embed=new_embed, view=self)
         await interaction.response.send_message("You have joined the giveaway!", ephemeral=True)
@@ -201,7 +202,7 @@ async def run_giveaway(message_id: int, duration_seconds: int):
     original_embed = message.embeds[0]
     new_embed = discord.Embed(
         title=original_embed.title,
-        color=discord.Color.purple()
+        color=EMBED_COLOR
     )
 
     # Ended timestamp
@@ -212,14 +213,20 @@ async def run_giveaway(message_id: int, duration_seconds: int):
 
     if winners:
         winner_mentions = ", ".join(f"<@{w}>" for w in winners)
+        new_embed.add_field(name="Winners", value=winner_mentions, inline=False)
     else:
         winner_mentions = "No valid entries."
-
-    new_embed.add_field(name="Winners", value=winner_mentions, inline=False)
+        new_embed.add_field(name="Winners", value=winner_mentions, inline=False)
 
     # Remove join button
     await message.edit(embed=new_embed, view=None)
     print(f"[SUCCESS] Giveaway {message_id} ended. Winners: {winner_mentions}")
+
+    # Congratulation message in the giveaway channel
+    if winners:
+        await channel.send(
+            f"🎊 Congratulations {', '.join(f'<@{w}>' for w in winners)}, you won the **{gw['title']}**!"
+        )
 
 
 # ---------- SLASH COMMANDS ----------
@@ -264,12 +271,12 @@ async def gcreate(
 
     embed = discord.Embed(
         title=title,
-        color=discord.Color.purple()
+        color=EMBED_COLOR
     )
     embed.add_field(name="Ends", value=f"<t:{end_ts}:F>", inline=False)
     embed.add_field(name="Hosted by", value=f"<@{interaction.user.id}>", inline=False)
     embed.add_field(name="Entries", value="0", inline=False)
-    embed.add_field(name="Winners", value="TBA", inline=False)
+    # No "Winners" field yet – only added when giveaway ends
 
     await interaction.response.send_message("Giveaway created.", ephemeral=True)
 
@@ -357,7 +364,7 @@ async def reroll(
     original_embed = message.embeds[0]
     new_embed = discord.Embed(
         title=original_embed.title,
-        color=discord.Color.purple()
+        color=EMBED_COLOR
     )
 
     # Preserve fields but replace Winners
@@ -374,6 +381,11 @@ async def reroll(
 
     await message.edit(embed=new_embed)
     await interaction.response.send_message(f"Rerolled winners: {winner_mentions}", ephemeral=True)
+
+    # Congratulation message in the giveaway channel for reroll
+    await channel.send(
+        f"🎊 Congratulations {winner_mentions}, you won the **{gw['title']}**!"
+    )
 
 
 bot.run(TOKEN)
