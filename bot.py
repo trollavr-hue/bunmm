@@ -39,8 +39,8 @@ async def on_reaction_add(reaction, user):
     # Count total reactions on the message
     total_reacts = sum(r.count for r in message.reactions)
 
-    # Trigger at exactly 1 reaction
-    if total_reacts == 1:
+    # Trigger at exactly 10 reactions
+    if total_reacts == 10:
         channel = bot.get_channel(NOTIFY_CHANNEL_ID)
         if channel is None:
             try:
@@ -51,7 +51,7 @@ async def on_reaction_add(reaction, user):
 
         try:
             await channel.send(
-                "Hey king Ftdduck, your message has reached 1 reaction. <@1385468564231815239>"
+                "Hey king Ftdduck, your message has reached 10 reactions. <@1385468564231815239>"
             )
             print("[SUCCESS] Notification sent.")
         except Exception as e:
