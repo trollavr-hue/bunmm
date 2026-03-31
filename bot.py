@@ -26,7 +26,7 @@ discord.VoiceClient = None  # Prevent audioop import
 bot = commands.Bot(command_prefix="s!", intents=intents)
 
 # Brighter purple
-EMBED_COLOR = discord.Color.from_rgb(179, 102, 255)
+EMBED_COLOR = discord.Color.from_rgb(190, 120, 255)
 
 
 # ---------- UTILITIES ----------
@@ -54,21 +54,30 @@ def format_timestamp(seconds_from_now: int) -> int:
     return int(discord.utils.utcnow().timestamp()) + seconds_from_now
 
 
-def build_giveaway_description(ends_ts, host_id, entries, winners=None):
+def build_giveaway_description(ends_ts, host_id, entries):
     """
     Creates the stacked text layout exactly like the screenshot.
+    No winners until the giveaway ends.
     """
-    if winners is None:
-        winners_text = "TBA"
-    else:
-        winners_text = winners
-
     return (
         "```\n"
         f"Ends:       <t:{ends_ts}:F>\n"
         f"Hosted by:  @{host_id}\n"
         f"Entries:    {entries}\n"
-        f"Winners:    {winners_text}\n"
+        "```"
+    )
+
+
+def build_final_description(host_id, entries, winners):
+    """
+    Final stacked layout with winners added.
+    """
+    return (
+        "```\n"
+        f"Ended:      <t:{int(discord.utils.utcnow().timestamp())}:F>\n"
+        f"Hosted by:  @{host_id}\n"
+        f"Entries:    {entries}\n"
+        f"Winners:    {winners}\n"
         "```"
     )
 
@@ -123,8 +132,7 @@ class GiveawayView(discord.ui.View):
         new_desc = build_giveaway_description(
             gw["end_ts"],
             gw["host_id"],
-            len(gw["entries"]),
-            winners=None
+            len(gw["entries"])
         )
 
         new_embed = discord.Embed(
@@ -160,18 +168,15 @@ async def run_giveaway(message_id: int, duration_seconds: int):
         winners_text = "No valid entries."
 
     # Build final embed
-    new_desc = (
-        "```\n"
-        f"Ended:      <t:{int(discord.utils.utcnow().timestamp())}:F>\n"
-        f"Hosted by:  @{gw['host_id']}\n"
-        f"Entries:    {len(entries)}\n"
-        f"Winners:    {winners_text}\n"
-        "```"
+    final_desc = build_final_description(
+        gw["host_id"],
+        len(entries),
+        winners_text
     )
 
     final_embed = discord.Embed(
         title=gw["title"],
-        description=new_desc,
+        description=final_desc,
         color=EMBED_COLOR
     )
 
@@ -209,8 +214,7 @@ async def gcreate(interaction: discord.Interaction, title: str, timer: str, winn
     desc = build_giveaway_description(
         end_ts,
         interaction.user.id,
-        entries=0,
-        winners=None
+        entries=0
     )
 
     embed = discord.Embed(
@@ -267,18 +271,15 @@ async def reroll(interaction: discord.Interaction, message_id: str):
     winners_text = ", ".join(f"<@{w}>" for w in winners)
 
     # Update embed
-    new_desc = (
-        "```\n"
-        f"Ended:      <t:{gw['end_ts']}:F>\n"
-        f"Hosted by:  @{gw['host_id']}\n"
-        f"Entries:    {len(entries)}\n"
-        f"Winners:    {winners_text}\n"
-        "```"
+    final_desc = build_final_description(
+        gw["host_id"],
+        len(entries),
+        winners_text
     )
 
     new_embed = discord.Embed(
         title=gw["title"],
-        description=new_desc,
+        description=final_desc,
         color=EMBED_COLOR
     )
 
