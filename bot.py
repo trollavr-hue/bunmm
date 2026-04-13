@@ -43,11 +43,11 @@ async def on_ready():
         print(e)
 
 # ------------------------
-# Create reports channel
+# Create report channel
 # ------------------------
 @bot.event
 async def on_guild_join(guild):
-    existing = discord.utils.get(guild.text_channels, name="nsfw-reports")
+    existing = discord.utils.get(guild.text_channels, name="link-report")
     if existing:
         return
 
@@ -56,12 +56,12 @@ async def on_guild_join(guild):
         guild.me: discord.PermissionOverwrite(view_channel=True),
     }
 
-    # Allow admins to see it
+    # Allow admins
     for role in guild.roles:
         if role.permissions.administrator:
             overwrites[role] = discord.PermissionOverwrite(view_channel=True)
 
-    await guild.create_text_channel("nsfw-reports", overwrites=overwrites)
+    await guild.create_text_channel("link-report", overwrites=overwrites)
 
 # ------------------------
 # Moderation buttons
@@ -152,8 +152,8 @@ async def on_message(message):
         except:
             pass
 
-        # Find reports channel
-        report_channel = discord.utils.get(message.guild.text_channels, name="nsfw-reports")
+        # Find report channel
+        report_channel = discord.utils.get(message.guild.text_channels, name="link-report")
 
         if report_channel:
             embed = discord.Embed(
