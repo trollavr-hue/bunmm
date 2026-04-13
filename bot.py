@@ -52,9 +52,14 @@ async def on_guild_join(guild):
         return
 
     overwrites = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        guild.me: discord.PermissionOverwrite(read_messages=True)
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        guild.me: discord.PermissionOverwrite(view_channel=True),
     }
+
+    # Allow admins to see it
+    for role in guild.roles:
+        if role.permissions.administrator:
+            overwrites[role] = discord.PermissionOverwrite(view_channel=True)
 
     await guild.create_text_channel("nsfw-reports", overwrites=overwrites)
 
@@ -75,7 +80,7 @@ class ReportView(View):
             await self.user.kick(reason="Approved report")
             await interaction.response.send_message("User kicked.")
         except Exception as e:
-            await interaction.response.send_message(f"Error: {e}")
+            await interaction.response.send_message(f"Error: {e}", ephemeral=True)
 
     @discord.ui.button(label="Deny (Unmute)", style=discord.ButtonStyle.success)
     async def deny(self, interaction: discord.Interaction, button: Button):
@@ -86,7 +91,7 @@ class ReportView(View):
             await self.user.timeout(None)
             await interaction.response.send_message("Timeout removed.")
         except Exception as e:
-            await interaction.response.send_message(f"Error: {e}")
+            await interaction.response.send_message(f"Error: {e}", ephemeral=True)
 
 # ------------------------
 # Detect suspicious links
@@ -110,7 +115,9 @@ def is_suspicious(content: str):
 @app_commands.describe(new_name="New nickname for the bot")
 async def change_name(interaction: discord.Interaction, new_name: str):
     if not interaction.user.guild_permissions.manage_nicknames:
-        return await interaction.response.send_message("You need Manage Nicknames permission.", ephemeral=True)
+        return await interaction.response.send_message(
+            "You need Manage Nicknames permission.", ephemeral=True
+        )
 
     try:
         await interaction.guild.me.edit(nick=new_name)
@@ -133,7 +140,7 @@ async def on_message(message):
         data["handled_messages"].append(message.id)
         save_data(data)
 
-        # DELETE message
+        # Delete message
         try:
             await message.delete()
         except:
@@ -155,6 +162,7 @@ async def on_message(message):
                 color=discord.Color.red()
             )
             embed.add_field(name="User", value=message.author.mention)
+            embed.add_field(name="Channel", value=message.channel.mention)
 
             view = ReportView(message.author)
 
