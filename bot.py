@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
+from discord import app_commands
 import json
 import os
 from datetime import timedelta
@@ -29,6 +30,17 @@ def save_data(data):
         json.dump(data, f)
 
 data = load_data()
+
+# ------------------------
+# On ready (sync commands)
+# ------------------------
+@bot.event
+async def on_ready():
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} commands")
+    except Exception as e:
+        print(e)
 
 # ------------------------
 # Create reports channel
@@ -92,6 +104,21 @@ def is_suspicious(content: str):
     return any(word in content for word in suspicious_keywords)
 
 # ------------------------
+# Slash command: change nickname
+# ------------------------
+@bot.tree.command(name="name", description="Change the bot's nickname in this server")
+@app_commands.describe(new_name="New nickname for the bot")
+async def change_name(interaction: discord.Interaction, new_name: str):
+    if not interaction.user.guild_permissions.manage_nicknames:
+        return await interaction.response.send_message("You need Manage Nicknames permission.", ephemeral=True)
+
+    try:
+        await interaction.guild.me.edit(nick=new_name)
+        await interaction.response.send_message(f"Bot nickname changed to **{new_name}**")
+    except Exception as e:
+        await interaction.response.send_message(f"Error: {e}", ephemeral=True)
+
+# ------------------------
 # Message handler
 # ------------------------
 @bot.event
@@ -105,6 +132,12 @@ async def on_message(message):
     if is_suspicious(message.content):
         data["handled_messages"].append(message.id)
         save_data(data)
+
+        # DELETE message
+        try:
+            await message.delete()
+        except:
+            pass
 
         # Timeout user
         try:
