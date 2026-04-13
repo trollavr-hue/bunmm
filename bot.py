@@ -4,6 +4,7 @@ from discord.ui import View, Button
 from discord import app_commands
 import json
 import os
+import re
 from datetime import timedelta
 
 TOKEN = os.getenv("TOKEN")
@@ -32,7 +33,7 @@ def save_data(data):
 data = load_data()
 
 # ------------------------
-# On ready (sync commands)
+# On ready
 # ------------------------
 @bot.event
 async def on_ready():
@@ -56,7 +57,6 @@ async def on_guild_join(guild):
         guild.me: discord.PermissionOverwrite(view_channel=True),
     }
 
-    # Allow admins
     for role in guild.roles:
         if role.permissions.administrator:
             overwrites[role] = discord.PermissionOverwrite(view_channel=True)
@@ -64,7 +64,7 @@ async def on_guild_join(guild):
     await guild.create_text_channel("link-report", overwrites=overwrites)
 
 # ------------------------
-# Moderation buttons
+# Buttons
 # ------------------------
 class ReportView(View):
     def __init__(self, user):
@@ -77,7 +77,7 @@ class ReportView(View):
             return await interaction.response.send_message("No permission.", ephemeral=True)
 
         try:
-            await self.user.kick(reason="Approved report")
+            await self.user.kick(reason="NSFW link detected")
             await interaction.response.send_message("User kicked.")
         except Exception as e:
             await interaction.response.send_message(f"Error: {e}", ephemeral=True)
@@ -94,25 +94,48 @@ class ReportView(View):
             await interaction.response.send_message(f"Error: {e}", ephemeral=True)
 
 # ------------------------
-# Detect suspicious links
+# NSFW detection (STRICT)
 # ------------------------
-def is_suspicious(content: str):
-    suspicious_keywords = [
-        "discord.gg/",
-        "discord.com/invite",
-        "onlyfans",
-        "leak",
-        "nudes",
-        "nsfw"
-    ]
-    content = content.lower()
-    return any(word in content for word in suspicious_keywords)
+NSFW_KEYWORDS = [
+    "porn", "xxx", "hentai", "rule34", "nsfw",
+    "onlyfans", "xvideos", "xnxx", "redtube", "pornhub"
+]
+
+NSFW_DOMAINS = [
+    "onlyfans.com",
+    "pornhub.com",
+    "xvideos.com",
+    "xnxx.com",
+    "redtube.com"
+]
+
+NSFW_TLDS = [".xxx"]
+
+def is_nsfw_link(content: str):
+    content_lower = content.lower()
+
+    urls = re.findall(r'(https?://[^\s]+)', content_lower)
+
+    for url in urls:
+        # Check explicit domains
+        if any(domain in url for domain in NSFW_DOMAINS):
+            return True
+
+        # Check keywords inside URL
+        if any(keyword in url for keyword in NSFW_KEYWORDS):
+            return True
+
+        # Check adult TLDs
+        if any(tld in url for tld in NSFW_TLDS):
+            return True
+
+    return False
 
 # ------------------------
-# Slash command: change nickname
+# Slash command: nickname
 # ------------------------
 @bot.tree.command(name="name", description="Change the bot's nickname in this server")
-@app_commands.describe(new_name="New nickname for the bot")
+@app_commands.describe(new_name="New nickname")
 async def change_name(interaction: discord.Interaction, new_name: str):
     if not interaction.user.guild_permissions.manage_nicknames:
         return await interaction.response.send_message(
@@ -136,7 +159,7 @@ async def on_message(message):
     if message.id in data["handled_messages"]:
         return
 
-    if is_suspicious(message.content):
+    if is_nsfw_link(message.content):
         data["handled_messages"].append(message.id)
         save_data(data)
 
@@ -148,16 +171,15 @@ async def on_message(message):
 
         # Timeout user
         try:
-            await message.author.timeout(timedelta(hours=1), reason="Suspicious link")
+            await message.author.timeout(timedelta(hours=1), reason="NSFW link")
         except:
             pass
 
-        # Find report channel
         report_channel = discord.utils.get(message.guild.text_channels, name="link-report")
 
         if report_channel:
             embed = discord.Embed(
-                title="🚨 Suspicious Message Detected",
+                title="🚨 NSFW Link Detected",
                 description=message.content,
                 color=discord.Color.red()
             )
@@ -171,6 +193,6 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # ------------------------
-# Run bot
+# Run
 # ------------------------
 bot.run(TOKEN)
